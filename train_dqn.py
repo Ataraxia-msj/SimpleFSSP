@@ -27,10 +27,12 @@ best_schedule = None
 makespans = []
 avg_makespans = []  # 用于平滑的平均完工时间
 losses = []  # 记录损失
+episode_rewards = [] # 新增：记录每轮的总奖励
+epsilon_values = [] # 新增：记录每轮的探索率
 
 # 收敛指标 - 更合理的设置
 convergence_window = 50  # 检查连续50次评估的表现
-early_stopping_patience = 300  # 减少提前停止的耐心值
+early_stopping_patience = 200  # 减少提前停止的耐心值
 target_performance = None  # 将在前100轮训练后动态设置
 min_epsilon = 0.1  # 最小探索率
 
@@ -95,8 +97,9 @@ for episode in range(n_episodes):
         total_reward += reward
     
     # 记录本轮损失
-    if episode_losses:
-        losses.append(np.mean(episode_losses))
+    avg_episode_loss = np.mean(episode_losses) if episode_losses else 0 # Handle case with no losses
+    losses.append(avg_episode_loss)
+    episode_rewards.append(total_reward) # 新增：记录当前轮的总奖励
     
     # 计算调度的完工时间
     makespan = max(env.machine_available_time)
@@ -177,6 +180,7 @@ for episode in range(n_episodes):
     
     # 在每轮结束时更新探索率
     epsilon = max(min_epsilon, epsilon * epsilon_decay)
+    epsilon_values.append(epsilon) # 新增：记录当前轮的探索率
     if episode % test_freq == 0:
         print(f"Current exploration rate (epsilon): {epsilon:.4f}")
 
@@ -191,29 +195,46 @@ for job_idx, op_pos, machine_idx, start_time, completion_time in best_schedule:
 plt.rcParams['font.family'] = 'DejaVu Sans'
 
 # 绘制学习曲线（多子图版本）
-fig, axs = plt.subplots(2, 1, figsize=(12, 10))
+fig, axs = plt.subplots(2, 2, figsize=(18, 12)) # 修改：增加子图数量和画布大小
 
 # 完工时间变化图
-axs[0].plot(makespans, 'b-', alpha=0.3, label='Raw')
+axs[0, 0].plot(makespans, 'b-', alpha=0.3, label='Raw Makespan')
 if avg_makespans:
     eval_indices = np.arange(0, len(makespans), test_freq)[:len(avg_makespans)]
-    axs[0].plot(eval_indices, avg_makespans, 'r-', label='Evaluation Avg')
-axs[0].set_title('Makespan Changes During Training')
-axs[0].set_xlabel('Episodes')
-axs[0].set_ylabel('Makespan')
-axs[0].legend()
-axs[0].grid(True)
+    axs[0, 0].plot(eval_indices, avg_makespans, 'r-', label='Evaluation Avg Makespan')
+axs[0, 0].set_title('Makespan Changes During Training')
+axs[0, 0].set_xlabel('Episodes')
+axs[0, 0].set_ylabel('Makespan')
+axs[0, 0].legend()
+axs[0, 0].grid(True)
 
 # 损失变化图
 if losses:
-    axs[1].plot(losses)
-    axs[1].set_title('Training Loss')
-    axs[1].set_xlabel('Episodes')
-    axs[1].set_ylabel('Loss')
-    axs[1].grid(True)
+    axs[0, 1].plot(losses, 'g-')
+    axs[0, 1].set_title('Training Loss Over Episodes')
+    axs[0, 1].set_xlabel('Episodes')
+    axs[0, 1].set_ylabel('Loss')
+    axs[0, 1].grid(True)
+
+# 每轮总奖励图
+if episode_rewards:
+    axs[1, 0].plot(episode_rewards, 'm-')
+    axs[1, 0].set_title('Total Reward Per Episode')
+    axs[1, 0].set_xlabel('Episodes')
+    axs[1, 0].set_ylabel('Total Reward')
+    axs[1, 0].grid(True)
+
+# Epsilon 衰减图
+if epsilon_values:
+    axs[1, 1].plot(epsilon_values, 'c-')
+    axs[1, 1].set_title('Epsilon Decay Over Episodes')
+    axs[1, 1].set_xlabel('Episodes')
+    axs[1, 1].set_ylabel('Epsilon Value')
+    axs[1, 1].grid(True)
+
 
 plt.tight_layout()
-plt.savefig('learning_curves.png')
+plt.savefig('learning_curves_detailed.png') # 修改：保存文件名
 plt.show()
 
 # 绘制甘特图
