@@ -6,7 +6,7 @@ class FJSPEnvironment(gym.Env):
     """柔性作业车间调度问题的强化学习环境"""
     
     def __init__(self, n_jobs, n_machines, operations):
-        super(FJSPEnvironment, self).__init__()
+        super().__init__()
         
         self.n_jobs = n_jobs
         self.n_machines = n_machines
