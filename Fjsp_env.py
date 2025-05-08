@@ -15,7 +15,7 @@ class FJSPEnvironment(gym.Env):
         # 计算总工序数
         self.total_ops = sum(len(job) for job in operations)
         
-        # 动作空间: 选择(工序, 机器)对
+        # 动作空间: 选择(工序, 机器)对，动作空间大小等于总工序数乘以机器数（这里动作空间肯定是大了，因为每个工序不是所有的机器都可以加工的）
         self.action_space = spaces.Discrete(self.total_ops * self.n_machines)
         
         # 观测空间
@@ -31,7 +31,7 @@ class FJSPEnvironment(gym.Env):
         
     def reset(self):
         """重置环境状态"""
-        # 作业状态: 当前工序索引
+        # 作业状态: 当前工序索引。创建一个列表，长度为作业数，每个元素初始化为0，表示每个作业的第一道工序未完成
         self.job_status = [0] * self.n_jobs
         
         # 机器状态: 每台机器的可用时间
@@ -65,8 +65,13 @@ class FJSPEnvironment(gym.Env):
             return self._get_observation(), reward, self.done, {}
         
         # 执行调度
+        # 通过工序索引获取作业索引和工序位置
         job_idx, op_pos = self._get_job_op_from_idx(op_idx)
-        op_options = self.operations[job_idx][op_pos]
+        
+        # 获取工序选项
+        # 这里假设operations是一个列表，包含每个作业的工序选项，每个工序选项是一个元组(机器索引, 加工时间)
+        # 例如：operations = [[(0, 2), (1, 3)], [(0, 4), (1, 1)]]表示作业1有两道工序，作业2也有两道工序
+        op_options = self.operations[job_idx][op_pos] 
         
         # 检查所选机器是否可以处理该工序
         valid_machines = [opt[0] for opt in op_options]
@@ -121,8 +126,8 @@ class FJSPEnvironment(gym.Env):
     
     def _decode_action(self, action):
         """解码动作为(工序索引, 机器索引)"""
-        op_idx = action // self.n_machines
-        machine_idx = action % self.n_machines
+        op_idx = action // self.n_machines      # action整除机器数得到工序索引 
+        machine_idx = action % self.n_machines  # action除以机器数取余得到机器索引
         return op_idx, machine_idx
     
     def _get_job_op_from_idx(self, op_idx):
@@ -198,7 +203,7 @@ class FJSPEnvironment(gym.Env):
         
         if self.done:
             # 完成所有工序，给予强化奖励
-            return 100 - current_makespan * 5  # 完成奖励，makespan越小奖励越大
+            return 1000 - current_makespan * 5  # 完成奖励，makespan越小奖励越大
         
         # 计算完成的工序百分比
         completed_ops = sum(self.job_status)

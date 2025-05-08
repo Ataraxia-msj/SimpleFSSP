@@ -28,13 +28,18 @@ makespans = []
 avg_makespans = []  # 用于平滑的平均完工时间
 losses = []  # 记录损失
 
-# 收敛指标
+# 收敛指标 - 更合理的设置
 convergence_window = 50  # 检查连续50次评估的表现
-target_performance = 8  # 目标完工时间
-early_stopping_patience = 200  # 如果连续200轮没有改进，提前停止
+early_stopping_patience = 300  # 减少提前停止的耐心值
+target_performance = None  # 将在前100轮训练后动态设置
+min_epsilon = 0.05  # 最小探索率
 
 last_improvement = 0
 window_makespans = []
+
+# 在训练循环开始前添加探索率衰减逻辑
+epsilon = 1.0  # 初始探索率
+epsilon_decay = 0.998  # 每轮衰减率
 
 # 训练循环
 for episode in range(n_episodes):
@@ -56,14 +61,27 @@ for episode in range(n_episodes):
                 valid_actions.append(action)
         
         # 选择动作
-        action = agent.act(state, valid_actions)
+        action = agent.act(state, valid_actions, epsilon)
         
         # 执行动作
         next_state, reward, done, _ = env.step(action)
         
         # 增强奖励信号
-        if done and max(env.machine_available_time) <= 7:  # 如果完成且makespan很好
-            reward += 50  # 额外奖励
+        if done and max(env.machine_available_time) <= 60:  # 如果完成且makespan很好
+            reward += 500  # 额外奖励
+        
+        # 修改奖励函数 - 更加渐进的奖励
+        if done:
+            makespan = max(env.machine_available_time)
+            # 渐进式奖励，根据完工时间给予不同程度的奖励
+            if makespan <= 50:
+                reward += 100  # 非常出色的调度
+            elif makespan <= 60:
+                reward += 50  # 很好的调度
+            elif makespan <= 80:
+                reward += 20  # 良好的调度
+            elif makespan <= 90:
+                reward += 10  # 可接受的调度
         
         # 存储经验
         agent.remember(state, action, reward, next_state, done)
@@ -114,12 +132,12 @@ for episode in range(n_episodes):
                         action = op_idx * env.n_machines + machine_idx
                         eval_valid_actions.append(action)
                 
+                # 修正评估时的动作选择逻辑 - 使用纯贪婪策略
                 with torch.no_grad():
-                    eval_action = agent.act(eval_state, eval_valid_actions)
-                    eval_action = np.argmax(agent.q_network(torch.FloatTensor(eval_state.reshape(1, -1)).to(agent.device)).cpu().numpy()[0])
-                    # 确保选择的动作有效
-                    if eval_action not in eval_valid_actions:
-                        eval_action = np.random.choice(eval_valid_actions)
+                    q_values = agent.q_network(torch.FloatTensor(eval_state.reshape(1, -1)).to(agent.device)).cpu().numpy()[0]
+                    # 仅考虑有效动作
+                    valid_q_values = {a: q_values[a] for a in eval_valid_actions}
+                    eval_action = max(valid_q_values, key=valid_q_values.get)
                 
                 eval_next_state, _, eval_done, _ = env.step(eval_action)
                 eval_state = eval_next_state
@@ -130,11 +148,17 @@ for episode in range(n_episodes):
         avg_makespan = np.mean(eval_makespans)
         avg_makespans.append(avg_makespan)
         
+        # 动态设置目标完工时间
+        if episode == 100 and target_performance is None:
+            best_so_far = min(avg_makespans)
+            target_performance = max(best_so_far * 0.9, 8)  # 设置为当前最佳的90%或8，取较大值
+            print(f"Target performance dynamically set to: {target_performance}")
+        
         # 打印进度
         print(f"Episode {episode}/{n_episodes}, Makespan: {makespan}, Eval Avg: {avg_makespan:.1f}, Best: {best_makespan}")
         
         # 检查是否满足收敛条件
-        if avg_makespan <= target_performance:
+        if target_performance is not None and avg_makespan <= target_performance:
             print(f"Target performance reached at episode {episode}!")
             if episode > convergence_window and all(m <= target_performance * 1.1 for m in avg_makespans[-10:]):
                 print("Model converged to target performance. Stopping early.")
@@ -150,6 +174,11 @@ for episode in range(n_episodes):
         for param_group in agent.optimizer.param_groups:
             param_group['lr'] *= 0.9
         print(f"Learning rate adjusted to {agent.optimizer.param_groups[0]['lr']:.6f}")
+    
+    # 在每轮结束时更新探索率
+    epsilon = max(min_epsilon, epsilon * epsilon_decay)
+    if episode % test_freq == 0:
+        print(f"Current exploration rate (epsilon): {epsilon:.4f}")
 
 # 输出最佳调度结果
 print("\nBest Scheduling Result:")

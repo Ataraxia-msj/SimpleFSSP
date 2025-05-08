@@ -85,11 +85,11 @@ class DQNAgent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # 超参数调整
-        self.gamma = 0.99  # 增大折扣因子
+        self.gamma = 0.99  # 折扣因子
         self.epsilon = 1.0  # 探索率
-        self.epsilon_min = 0.05  # 提高最小探索率
-        self.epsilon_decay = 0.997  # 放缓衰减速度
-        self.learning_rate = 0.0005  # 降低学习率
+        self.epsilon_min = 0.05  # 最小探索率
+        self.epsilon_decay = 0.997  # 衰减速度
+        self.learning_rate = 0.0005  # 学习率
         self.update_target_freq = 50  # 更频繁地更新目标网络
         
         # 使用优先经验回放
@@ -128,30 +128,20 @@ class DQNAgent:
         """存储经验到回放缓冲区"""
         self.memory.add(state, action, reward, next_state, done)
     
-    def act(self, state, valid_actions=None):
+    def act(self, state, valid_actions, epsilon=None):
         """选择动作"""
-        if valid_actions is None:
-            valid_actions = list(range(self.action_size))
+        if epsilon is None:
+            epsilon = self.epsilon  # 使用默认值
         
-        # 加入周期性探索策略
-        if np.random.rand() <= max(self.epsilon, self.epsilon_min + 0.1 * np.sin(self.train_step_counter/100)):
-            # 探索: 随机选择一个有效动作
-            return random.choice(valid_actions)
+        if np.random.rand() <= epsilon:
+            return np.random.choice(valid_actions)
         
-        # 转换状态为张量
-        state_tensor = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
-        
-        # 开发: 选择Q值最大的有效动作
+        state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
         with torch.no_grad():
-            act_values = self.q_network(state_tensor).cpu().numpy()[0]
-        
-        # 屏蔽无效动作
-        invalid_mask = np.ones(self.action_size) * float('-inf')
-        for a in valid_actions:
-            invalid_mask[a] = 0
-        masked_act_values = act_values + invalid_mask
-        
-        return np.argmax(masked_act_values)
+            q_values = self.q_network(state).cpu().numpy()[0]
+            # 仅考虑有效动作
+            valid_q_values = {a: q_values[a] for a in valid_actions}
+            return max(valid_q_values, key=valid_q_values.get)
     
     def replay(self, batch_size):
         """从经验回放中采样并训练网络"""
