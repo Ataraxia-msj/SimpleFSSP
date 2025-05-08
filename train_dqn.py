@@ -19,9 +19,9 @@ action_size = env.action_space.n
 agent = DQNAgent(state_size, action_size)
 
 # 训练参数调整
-n_episodes = 2000  # 增加训练轮数
-batch_size = 32  # 减小批次大小，更频繁更新
-test_freq = 10  # 每隔多少轮评估一次
+n_episodes = 3000  # 增加训练轮数
+batch_size = 64  # 增大批次大小提高稳定性
+test_freq = 20  # 减少评估频率
 best_makespan = float('inf')
 best_schedule = None
 makespans = []
@@ -32,14 +32,14 @@ losses = []  # 记录损失
 convergence_window = 50  # 检查连续50次评估的表现
 early_stopping_patience = 300  # 减少提前停止的耐心值
 target_performance = None  # 将在前100轮训练后动态设置
-min_epsilon = 0.05  # 最小探索率
+min_epsilon = 0.1  # 最小探索率
 
 last_improvement = 0
 window_makespans = []
 
 # 在训练循环开始前添加探索率衰减逻辑
 epsilon = 1.0  # 初始探索率
-epsilon_decay = 0.998  # 每轮衰减率
+epsilon_decay = 0.995  # 每轮衰减率
 
 # 训练循环
 for episode in range(n_episodes):
@@ -75,11 +75,11 @@ for episode in range(n_episodes):
             makespan = max(env.machine_available_time)
             # 渐进式奖励，根据完工时间给予不同程度的奖励
             if makespan <= 50:
-                reward += 100  # 非常出色的调度
+                reward += 1000  # 非常出色的调度
             elif makespan <= 60:
-                reward += 50  # 很好的调度
+                reward += 500  # 很好的调度
             elif makespan <= 80:
-                reward += 20  # 良好的调度
+                reward += 200  # 良好的调度
             elif makespan <= 90:
                 reward += 10  # 可接受的调度
         
@@ -170,9 +170,9 @@ for episode in range(n_episodes):
             break
     
     # 学习率调度
-    if episode % 200 == 0 and episode > 0:
+    if episode % 300 == 0 and episode > 0:
         for param_group in agent.optimizer.param_groups:
-            param_group['lr'] *= 0.9
+            param_group['lr'] *= 0.95
         print(f"Learning rate adjusted to {agent.optimizer.param_groups[0]['lr']:.6f}")
     
     # 在每轮结束时更新探索率

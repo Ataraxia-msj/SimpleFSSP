@@ -89,11 +89,11 @@ class DQNAgent:
         self.epsilon = 1.0  # 探索率
         self.epsilon_min = 0.05  # 最小探索率
         self.epsilon_decay = 0.997  # 衰减速度
-        self.learning_rate = 0.0005  # 学习率
+        self.learning_rate = 0.0004  # 学习率
         self.update_target_freq = 50  # 更频繁地更新目标网络
         
         # 使用优先经验回放
-        self.memory = PrioritizedReplayBuffer(capacity=10000)
+        self.memory = PrioritizedReplayBuffer(capacity=20000, alpha=0.6, beta=0.4, beta_increment=0.001)
         
         # 创建更深/更宽的Q网络
         self.q_network = self._build_model().to(self.device)
@@ -108,21 +108,21 @@ class DQNAgent:
         self.train_step_counter = 0
     
     def _build_model(self):
-        """构建更复杂的Q网络"""
-        model = nn.Sequential(
-            nn.Linear(self.state_size, 256),
+        """构建改进的Q网络"""
+        return nn.Sequential(
+            nn.Linear(self.state_size, 128),
+            nn.LayerNorm(128),  # 添加层归一化增加稳定性
             nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
+            nn.Linear(128, 128),
+            nn.LayerNorm(128),
             nn.ReLU(),
             nn.Linear(128, self.action_size)
         )
-        return model
     
-    def update_target_network(self):
-        """更新目标网络权重"""
-        self.target_network.load_state_dict(self.q_network.state_dict())
+    def update_target_network(self, tau=0.01):
+        """软更新目标网络"""
+        for target_param, param in zip(self.target_network.parameters(), self.q_network.parameters()):
+            target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
     
     def remember(self, state, action, reward, next_state, done):
         """存储经验到回放缓冲区"""
