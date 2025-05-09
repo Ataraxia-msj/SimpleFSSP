@@ -203,7 +203,7 @@ class FJSPEnvironment(gym.Env):
         
         if self.done:
             # 完成所有工序，给予强化奖励
-            return 1000 - current_makespan * 5  # 完成奖励，makespan越小奖励越大
+            return 600 - current_makespan * 5  # 完成奖励，makespan越小奖励越大
         
         # 计算完成的工序百分比
         completed_ops = sum(self.job_status)
@@ -214,9 +214,9 @@ class FJSPEnvironment(gym.Env):
         utilization = 1.0 - (idle_time / (self.n_machines * current_makespan) if current_makespan > 0 else 0)
         
         # 组合奖励
-        progress_reward = completion_percentage * 2.0  # 进度奖励
-        time_reward = -2.0 * current_makespan  # 时间惩罚
-        balance_reward = utilization * 5.0  # 利用率奖励
+        progress_reward = completion_percentage * 20.0  # 进度奖励
+        time_reward = -20.0 * current_makespan  # 时间惩罚
+        balance_reward = utilization * 80.0  # 利用率奖励
         
         return progress_reward + time_reward + balance_reward
     

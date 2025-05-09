@@ -19,9 +19,9 @@ action_size = env.action_space.n
 agent = DQNAgent(state_size, action_size)
 
 # 训练参数调整
-n_episodes = 3000  # 增加训练轮数
+n_episodes = 10000  # 增加训练轮数
 batch_size = 64  # 增大批次大小提高稳定性
-test_freq = 20  # 减少评估频率
+test_freq = 30  # 减少评估频率
 best_makespan = float('inf')
 best_schedule = None
 makespans = []
@@ -31,8 +31,8 @@ episode_rewards = [] # 新增：记录每轮的总奖励
 epsilon_values = [] # 新增：记录每轮的探索率
 
 # 收敛指标 - 更合理的设置
-convergence_window = 50  # 检查连续50次评估的表现
-early_stopping_patience = 200  # 减少提前停止的耐心值
+convergence_window = 100  # 检查连续50次评估的表现
+early_stopping_patience = 10000  # 减少提前停止的耐心值
 target_performance = None  # 将在前100轮训练后动态设置
 min_epsilon = 0.1  # 最小探索率
 
@@ -41,7 +41,7 @@ window_makespans = []
 
 # 在训练循环开始前添加探索率衰减逻辑
 epsilon = 1.0  # 初始探索率
-epsilon_decay = 0.995  # 每轮衰减率
+epsilon_decay = 0.99  # 每轮衰减率
 
 # 训练循环
 for episode in range(n_episodes):
@@ -218,10 +218,20 @@ if losses:
 
 # 每轮总奖励图
 if episode_rewards:
-    axs[1, 0].plot(episode_rewards, 'm-')
+    axs[1, 0].plot(episode_rewards, 'm-', alpha=0.3, label='Raw Total Reward') # 原始奖励设为半透明
+    # 计算移动平均奖励
+    reward_smoothing_window = 50 # 可以调整窗口大小
+    if len(episode_rewards) >= reward_smoothing_window:
+        smoothed_rewards = np.convolve(episode_rewards, np.ones(reward_smoothing_window)/reward_smoothing_window, mode='valid')
+        # 为了对齐x轴，移动平均线通常会比原始数据短，我们可以调整绘图的起始点
+        axs[1, 0].plot(np.arange(reward_smoothing_window - 1, len(episode_rewards)), smoothed_rewards, 'm-', linewidth=2, label=f'Smoothed Reward (window {reward_smoothing_window})')
+    else: # 如果数据点不足以计算移动平均，则只画原始数据
+        axs[1, 0].plot(episode_rewards, 'm-', linewidth=2, label='Raw Total Reward')
+
     axs[1, 0].set_title('Total Reward Per Episode')
     axs[1, 0].set_xlabel('Episodes')
     axs[1, 0].set_ylabel('Total Reward')
+    axs[1, 0].legend()
     axs[1, 0].grid(True)
 
 # Epsilon 衰减图
