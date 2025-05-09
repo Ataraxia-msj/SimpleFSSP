@@ -19,7 +19,7 @@ action_size = env.action_space.n
 agent = DQNAgent(state_size, action_size)
 
 # 训练参数调整
-n_episodes = 10000  # 增加训练轮数
+n_episodes = 4000  # 增加训练轮数
 batch_size = 64  # 增大批次大小提高稳定性
 test_freq = 30  # 减少评估频率
 best_makespan = float('inf')
@@ -32,16 +32,16 @@ epsilon_values = [] # 新增：记录每轮的探索率
 
 # 收敛指标 - 更合理的设置
 convergence_window = 100  # 检查连续50次评估的表现
-early_stopping_patience = 10000  # 减少提前停止的耐心值
+early_stopping_patience = 4000  # 减少提前停止的耐心值
 target_performance = None  # 将在前100轮训练后动态设置
-min_epsilon = 0.1  # 最小探索率
+min_epsilon = 0.05  # 最小探索率
 
 last_improvement = 0
 window_makespans = []
 
 # 在训练循环开始前添加探索率衰减逻辑
 epsilon = 1.0  # 初始探索率
-epsilon_decay = 0.99  # 每轮衰减率
+epsilon_decay = 0.999  # 每轮衰减率
 
 # 训练循环
 for episode in range(n_episodes):

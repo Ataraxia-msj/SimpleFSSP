@@ -89,7 +89,7 @@ class DQNAgent:
         self.epsilon = 1.0  # 探索率
         self.epsilon_min = 0.05  # 最小探索率
         self.epsilon_decay = 0.99  # 衰减速度
-        self.learning_rate = 0.0005  # 学习率
+        self.learning_rate = 0.0006  # 学习率
         self.update_target_freq = 50  # 更频繁地更新目标网络
         
         # 使用优先经验回放
