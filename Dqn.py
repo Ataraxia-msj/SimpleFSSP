@@ -85,7 +85,7 @@ class DQNAgent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # 超参数调整
-        self.gamma = 0.999  # 折扣因子
+        self.gamma = 0.9995  # 折扣因子
         self.epsilon = 1.0  # 探索率
         self.epsilon_min = 0.05  # 最小探索率
         self.epsilon_decay = 0.99  # 衰减速度

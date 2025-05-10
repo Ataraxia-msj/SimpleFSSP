@@ -68,16 +68,18 @@ for episode in range(n_episodes):
         # 执行动作
         next_state, reward, done, _ = env.step(action)
         
-        # 增强奖励信号
-        if done and max(env.machine_available_time) <= 60:  # 如果完成且makespan很好
-            reward += 500  # 额外奖励
+        # # 增强奖励信号
+        # if done and max(env.machine_available_time) <= 50:  # 如果完成且makespan很好
+        #     reward += 500  # 额外奖励
         
         # 修改奖励函数 - 更加渐进的奖励
         if done:
             makespan = max(env.machine_available_time)
             # 渐进式奖励，根据完工时间给予不同程度的奖励
-            if makespan <= 50:
+            if makespan <= 47:
                 reward += 1000  # 非常出色的调度
+            elif makespan <= 50:
+                reward += 800
             elif makespan <= 60:
                 reward += 500  # 很好的调度
             elif makespan <= 80:

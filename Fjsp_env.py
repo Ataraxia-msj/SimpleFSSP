@@ -215,7 +215,7 @@ class FJSPEnvironment(gym.Env):
         
         # 组合奖励
         progress_reward = completion_percentage * 20.0  # 进度奖励
-        time_reward = -20.0 * current_makespan  # 时间惩罚
+        time_reward = -2.0 * current_makespan  # 时间惩罚
         balance_reward = utilization * 80.0  # 利用率奖励
         
         return progress_reward + time_reward + balance_reward
