@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from load_data import load_fjsp_instance
+from utils.load_data import load_fjsp_instance
 from Fjsp_env import FJSPEnvironment
 from Dqn import DQNAgent
 
@@ -9,6 +9,7 @@ from Dqn import DQNAgent
 file_path = "data/Mk01.fjs"
 n_jobs, n_machines, operations = load_fjsp_instance(file_path)
 print(f"Loaded {n_jobs} jobs, {n_machines} machines FJSP instance")
+
 
 # 创建环境
 env = FJSPEnvironment(n_jobs, n_machines, operations)
@@ -18,8 +19,10 @@ action_size = env.action_space.n
 # 创建智能体
 agent = DQNAgent(state_size, action_size)
 
+
+print("Using device:", agent.device)
 # 训练参数调整
-n_episodes = 4000  # 增加训练轮数
+n_episodes = 2000  # 增加训练轮数
 batch_size = 64  # 增大批次大小提高稳定性
 test_freq = 30  # 减少评估频率
 best_makespan = float('inf')

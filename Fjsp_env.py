@@ -203,7 +203,7 @@ class FJSPEnvironment(gym.Env):
         
         if self.done:
             # 完成所有工序，给予强化奖励
-            return 600 - current_makespan * 5  # 完成奖励，makespan越小奖励越大
+            return 600 - current_makespan * 10  # 完成奖励，makespan越小奖励越大
         
         # 计算完成的工序百分比
         completed_ops = sum(self.job_status)
