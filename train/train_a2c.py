@@ -19,12 +19,12 @@ action_size = env.action_space.n
 agent = A2CAgent(
     state_size, 
     action_size, 
-    lr=9e-5,        
-    gamma=0.99      
+    lr=5e-4,        
+    gamma=0.95      
 )
 
 n_episodes = 1000   # 训练轮数，可增大如2000、5000
-test_freq = 20
+test_freq = 10
 best_makespan = float('inf')
 best_schedule = None
 makespans = []
